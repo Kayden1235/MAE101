@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhận Biết Ma Trận Bậc Thang</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- math.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.0.0/math.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+        <h1 class="text-2xl font-bold text-blue-600 mb-4 text-center">Nhận Biết Ma Trận Bậc Thang</h1>
+
+        <!-- Nút tạo ma trận -->
+        <div class="flex justify-center mb-4">
+            <button id="generateMatrix" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Tạo Ma Trận
+            </button>
+        </div>
+
+        <!-- Hiển thị ma trận -->
+        <div id="matrixDisplay" class="text-center mb-4">
+            <p class="text-lg font-semibold">Ma trận của bạn:</p>
+            <div id="matrixLatex" class="text-xl"></div>
+        </div>
+
+        <!-- Kết quả phân tích -->
+        <div id="result" class="mb-4 p-4 border rounded-lg">
+            <h2 class="text-lg font-semibold text-blue-600">Kết luận:</h2>
+            <p id="resultText" class="text-gray-700"></p>
+        </div>
+
+        <!-- Giải thích -->
+        <div class="mb-4 p-4 border rounded-lg">
+            <h2 class="text-lg font-semibold text-blue-600">Giải thích:</h2>
+            <ul id="explanation" class="list-disc list-inside text-gray-700"></ul>
+        </div>
+
+        <!-- Quy tắc ma trận bậc thang -->
+        <div class="mb-4 p-4 border rounded-lg">
+            <h2 class="text-lg font-semibold text-blue-600">Quy tắc ma trận bậc thang:</h2>
+            <ul class="list-disc list-inside text-gray-700">
+                <li>Hàng toàn 0 (nếu có) nằm dưới các hàng khác.</li>
+                <li>Nếu không tính các hàng toàn 0, các phần tử khác 0 đầu tiên của mỗi hàng phải so le (tăng dần từ trái sang phải).</li>
+            </ul>
+            <h2 class="text-lg font-semibold text-blue-600 mt-2">Quy tắc ma trận bậc thang rút gọn:</h2>
+            <ul class="list-disc list-inside text-gray-700">
+                <li>Phải là ma trận bậc thang.</li>
+                <li>Các phần tử khác 0 đầu tiên của mỗi hàng (pivot) phải là 1.</li>
+                <li>Mỗi cột chứa pivot chỉ có số 1 tại pivot, các phần tử còn lại là 0.</li>
+            </ul>
+        </div>
+
+        <!-- Nút kiểm tra -->
+        <div class="flex justify-center space-x-4">
+            <button id="isRowEchelon" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                Đây là ma trận bậc thang
+            </button>
+            <button id="isReducedRowEchelon" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                Đây không phải ma trận bậc thang
+            </button>
+        </div>
+
+        <!-- Nút chỉnh sửa -->
+        <div class="flex justify-center mt-4">
+            <button id="editMatrix" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                Chỉnh sửa
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Ma trận mặc định từ hình ảnh
+        let matrix = [
+            [3, 4],
+            [5, 1, 3, -2],
+            [0, 0, 4, 4]
+        ];
+
+        // Hiển thị ma trận bằng MathJax
+        function displayMatrix() {
+            const latex = math.parse(matrix).toTex({ parenthesis: "keep" });
+            document.getElementById('matrixLatex').innerHTML = `\\(${latex}\\)`; 
+            MathJax.typeset();
+        }
+
+        // Kiểm tra ma trận bậc thang
+        function isRowEchelonForm(matrix) {
+            let explanations = [];
+            let pivotPositions = [];
+            let zeroRowFound = false;
+
+            for (let i = 0; i < matrix.length; i++) {
+                let row = matrix[i];
+                let pivotCol = -1;
+
+                // Kiểm tra hàng toàn 0
+                if (row.every(x => x === 0)) {
+                    zeroRowFound = true;
+                    pivotPositions.push(-1);
+                    explanations.push(`Hàng ${i + 1} là hàng toàn 0.`);
+                    continue;
+                }
+
+                // Nếu đã gặp hàng toàn 0, các hàng sau phải toàn 0
+                if (zeroRowFound) {
+                    explanations.push(`Hàng ${i + 1} không phải hàng toàn 0 nhưng xuất hiện sau hàng toàn 0, không thỏa mãn điều kiện 1.`);
+                    return { isRowEchelon: false, explanations };
+                }
+
+                // Tìm pivot (phần tử khác 0 đầu tiên)
+                for (let j = 0; j < row.length; j++) {
+                    if (row[j] !== 0) {
+                        pivotCol = j;
+                        break;
+                    }
+                }
+
+                if (pivotCol === -1) continue;
+
+                pivotPositions.push(pivotCol);
+                explanations.push(`Hàng ${i + 1} có phần tử khác 0 đầu tiên tại cột ${pivotCol + 1}.`);
+
+                // Kiểm tra pivot tăng dần
+                if (i > 0 && pivotPositions[i - 1] !== -1 && pivotCol <= pivotPositions[i - 1]) {
+                    explanations.push(`Hàng ${i + 1} có pivot tại cột ${pivotCol + 1}, không lớn hơn pivot của hàng trước tại cột ${pivotPositions[i - 1] + 1}, không thỏa mãn điều kiện 2.`);
+                    return { isRowEchelon: false, explanations };
+                }
+            }
+
+            explanations.push("Ma trận thỏa mãn các điều kiện của ma trận bậc thang.");
+            return { isRowEchelon: true, explanations };
+        }
+
+        // Kiểm tra ma trận bậc thang rút gọn
+        function isReducedRowEchelonForm(matrix) {
+            let explanations = [];
+            let rowEchelonResult = isRowEchelonForm(matrix);
+            if (!rowEchelonResult.isRowEchelon) {
+                explanations = rowEchelonResult.explanations;
+                explanations.push("Vì không phải ma trận bậc thang, nên không phải ma trận bậc thang rút gọn.");
+                return { isReducedRowEchelon: false, explanations };
+            }
+
+            explanations = rowEchelonResult.explanations;
+            let pivotPositions = [];
+            let pivotValues = [];
+
+            // Tìm pivot và kiểm tra điều kiện
+            for (let i = 0; i < matrix.length; i++) {
+                let row = matrix[i];
+                let pivotCol = -1;
+                for (let j = 0; j < row.length; j++) {
+                    if (row[j] !== 0) {
+                        pivotCol = j;
+                        break;
+                    }
+                }
+                if (pivotCol === -1) {
+                    pivotPositions.push(-1);
+                    pivotValues.push(0);
+                    continue;
+                }
+
+                pivotPositions.push(pivotCol);
+                pivotValues.push(row[pivotCol]);
+
+                // Kiểm tra pivot có phải là 1 không
+                if (row[pivotCol] !== 1) {
+                    explanations.push(`Hàng ${i + 1} có pivot tại cột ${pivotCol + 1}, giá trị là ${row[pivotCol]}, không phải 1, không thỏa mãn điều kiện 2 của ma trận bậc thang rút gọn.`);
+                    return { isReducedRowEchelon: false, explanations };
+                }
+            }
+
+            // Kiểm tra cột chứa pivot
+            for (let i = 0; i < matrix.length; i++) {
+                let pivotCol = pivotPositions[i];
+                if (pivotCol === -1) continue;
+
+                for (let row = 0; row < matrix.length; row++) {
+                    if (row !== i && matrix[row][pivotCol] !== 0) {
+                        explanations.push(`Cột ${pivotCol + 1} chứa pivot tại hàng ${i + 1}, nhưng phần tử tại hàng ${row + 1} là ${matrix[row][pivotCol]}, không phải 0, không thỏa mãn điều kiện 3 của ma trận bậc thang rút gọn.`);
+                        return { isReducedRowEchelon: false, explanations };
+                    }
+                }
+            }
+
+            explanations.push("Ma trận thỏa mãn các điều kiện của ma trận bậc thang rút gọn.");
+            return { isReducedRowEchelon: true, explanations };
+        }
+
+        // Hiển thị kết quả và giải thích
+        function displayResult() {
+            const rowEchelonResult = isRowEchelonForm(matrix);
+            const reducedRowEchelonResult = isReducedRowEchelonForm(matrix);
+
+            const resultText = reducedRowEchelonResult.isReducedRowEchelon
+                ? "Đây là ma trận bậc thang rút gọn."
+                : rowEchelonResult.isRowEchelon
+                ? "Đây là ma trận bậc thang, nhưng không phải bậc thang rút gọn."
+                : "Đây không phải là ma trận bậc thang.";
+
+            document.getElementById('resultText').innerText = resultText;
+
+            const explanationList = document.getElementById('explanation');
+            explanationList.innerHTML = '';
+            const explanations = reducedRowEchelonResult.explanations;
+            explanations.forEach(exp => {
+                const li = document.createElement('li');
+                li.innerText = exp;
+                explanationList.appendChild(li);
+            });
+        }
+
+        // Sự kiện nút "Tạo Ma Trận"
+        document.getElementById('generateMatrix').addEventListener('click', () => {
+            displayMatrix();
+            displayResult();
+        });
+
+        // Sự kiện nút "Đây là ma trận bậc thang"
+        document.getElementById('isRowEchelon').addEventListener('click', () => {
+            const rowEchelonResult = isRowEchelonForm(matrix);
+            alert(rowEchelonResult.isRowEchelon
+                ? "Đúng! Đây là ma trận bậc thang."
+                : "Sai! Đây không phải ma trận bậc thang. Xem giải thích để biết thêm chi tiết.");
+        });
+
+        // Sự kiện nút "Đây không phải ma trận bậc thang"
+        document.getElementById('isReducedRowEchelon').addEventListener('click', () => {
+            const rowEchelonResult = isRowEchelonForm(matrix);
+            alert(rowEchelonResult.isRowEchelon
+                ? "Sai! Đây là ma trận bậc thang. Xem giải thích để biết thêm chi tiết."
+                : "Đúng! Đây không phải ma trận bậc thang.");
+        });
+
+        // Sự kiện nút "Chỉnh sửa"
+        document.getElementById('editMatrix').addEventListener('click', () => {
+            const input = prompt("Nhập ma trận mới (dạng [[a,b],[c,d],...]):", JSON.stringify(matrix));
+            if (input) {
+                try {
+                    matrix = math.evaluate(input);
+                    displayMatrix();
+                    displayResult();
+                } catch (e) {
+                    alert("Ma trận không hợp lệ! Vui lòng nhập lại.");
+                }
+            }
+        });
+
+        // Hiển thị ma trận mặc định khi tải trang
+        displayMatrix();
+        displayResult();
+    </script>
+</body>
+</html>
