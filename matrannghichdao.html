@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Matrix Tool: Minor, Cofactor, Adjugate, Determinant & Inverse</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .matrix-input {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+      gap: 5px;
+      margin-bottom: 20px;
+      max-width: 300px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    input[type='number'], select {
+      width: 100%;
+      padding: 8px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    .output {
+      max-width: 700px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    .matrix {
+      display: inline-grid;
+      grid-template-columns: repeat(auto-fit, 50px);
+      gap: 4px;
+    }
+    .matrix div {
+      background: #e0e0e0;
+      text-align: center;
+      padding: 10px;
+    }
+    .fraction {
+      display: inline-block;
+      position: relative;
+      vertical-align: middle;
+      letter-spacing: 0.001em;
+      text-align: center;
+      font-size: 14px;
+    }
+    .fraction span {
+      display: block;
+      padding: 0.1em;
+    }
+    .fraction span.bottom {
+      border-top: 1px solid;
+    }
+  </style>
+</head>
+<body>
+  <h1>Matrix Calculator</h1>
+  <div style="text-align:center">
+    <label>Size: <input type="number" id="size" value="3" min="2" max="5" /></label>
+    <button onclick="generateMatrix()">Generate Matrix</button>
+  </div>
+  <div id="matrixContainer" class="matrix-input"></div>
+  <div style="text-align:center">
+    <label>Row: <input type="number" id="row" value="1" min="1" /></label>
+    <label>Column: <input type="number" id="col" value="1" min="1" /></label>
+    <button onclick="computeSelected()">Compute</button>
+  </div>
+  <div id="output" class="output"></div>
+
+  <script>
+    function generateMatrix() {
+      const size = parseInt(document.getElementById('size').value);
+      const container = document.getElementById('matrixContainer');
+      container.innerHTML = '';
+      container.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+      for (let i = 0; i < size * size; i++) {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.id = `cell-${i}`;
+        input.value = 0;
+        container.appendChild(input);
+      }
+    }
+
+    function getMatrix(size) {
+      const matrix = [];
+      for (let i = 0; i < size; i++) {
+        const row = [];
+        for (let j = 0; j < size; j++) {
+          const val = parseFloat(document.getElementById(`cell-${i * size + j}`).value);
+          row.push(val);
+        }
+        matrix.push(row);
+      }
+      return matrix;
+    }
+
+    function minor(matrix, i, j) {
+      return matrix.filter((_, row) => row !== i)
+                   .map(row => row.filter((_, col) => col !== j));
+    }
+
+    function determinant(matrix) {
+      const n = matrix.length;
+      if (n === 1) return matrix[0][0];
+      if (n === 2) return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+      let det = 0;
+      for (let j = 0; j < n; j++) {
+        det += ((j % 2 === 0 ? 1 : -1) * matrix[0][j] * determinant(minor(matrix, 0, j)));
+      }
+      return det;
+    }
+
+    function cofactorMatrix(matrix) {
+      const size = matrix.length;
+      const cof = [];
+      for (let i = 0; i < size; i++) {
+        cof[i] = [];
+        for (let j = 0; j < size; j++) {
+          const m = minor(matrix, i, j);
+          cof[i][j] = ((i + j) % 2 === 0 ? 1 : -1) * determinant(m);
+        }
+      }
+      return cof;
+    }
+
+    function transpose(matrix) {
+      return matrix[0].map((_, col) => matrix.map(row => row[col]));
+    }
+
+    function gcd(a, b) {
+      a = Math.abs(a);
+      b = Math.abs(b);
+      while (b) {
+        let t = b;
+        b = a % b;
+        a = t;
+      }
+      return a;
+    }
+
+    function simplifyFraction(numerator, denominator) {
+      const commonDivisor = gcd(numerator, denominator);
+      const simplifiedNum = numerator / commonDivisor;
+      const simplifiedDen = denominator / commonDivisor;
+      
+      if (simplifiedDen === 1) return simplifiedNum.toString();
+      if (simplifiedDen < 0) {
+        return {
+          numerator: -simplifiedNum,
+          denominator: -simplifiedDen
+        };
+      }
+      return {
+        numerator: simplifiedNum,
+        denominator: simplifiedDen
+      };
+    }
+
+    function formatValue(val) {
+      if (Number.isInteger(val)) {
+        return val.toString();
+      }
+      return val.toFixed(2);
+    }
+
+    function formatFraction(numerator, denominator) {
+      const simplified = simplifyFraction(numerator, denominator);
+      if (typeof simplified === 'string') {
+        return simplified;
+      }
+      return `<div class="fraction">
+        <span>${simplified.numerator}</span>
+        <span class="bottom">${simplified.denominator}</span>
+      </div>`;
+    }
+
+    function inverseMatrix(matrix) {
+      const det = determinant(matrix);
+      if (det === 0) return null;
+      const cof = cofactorMatrix(matrix);
+      const adj = transpose(cof);
+      
+      const result = [];
+      for (let i = 0; i < adj.length; i++) {
+        result[i] = [];
+        for (let j = 0; j < adj[i].length; j++) {
+          const numerator = adj[i][j];
+          const denominator = det;
+          
+          // Check if it's an integer
+          if (numerator % denominator === 0) {
+            result[i][j] = (numerator / denominator).toString();
+          } else {
+            result[i][j] = formatFraction(numerator, denominator);
+          }
+        }
+      }
+      return result;
+    }
+
+    function displayMatrix(mat, title) {
+      let html = `<h3>${title}</h3><div class="matrix" style="grid-template-columns: repeat(${mat.length}, 50px);">`;
+      mat.forEach(row => {
+        row.forEach(val => {
+          if (typeof val === 'string' && val.includes('<div class="fraction"')) {
+            html += `<div style="line-height: 1;">${val}</div>`;
+          } else {
+            html += `<div>${val}</div>`;
+          }
+        });
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function computeSelected() {
+      const size = parseInt(document.getElementById('size').value);
+      const row = parseInt(document.getElementById('row').value) - 1;
+      const col = parseInt(document.getElementById('col').value) - 1;
+      const matrix = getMatrix(size);
+
+      if (row >= size || col >= size || row < 0 || col < 0) {
+        alert("Invalid row or column index");
+        return;
+      }
+
+      const mMinor = minor(matrix, row, col);
+      const cofVal = ((row + col) % 2 === 0 ? 1 : -1) * determinant(mMinor);
+      const cofMatrix = cofactorMatrix(matrix);
+      const adj = transpose(cofMatrix);
+      const det = determinant(matrix);
+      const inv = inverseMatrix(matrix);
+
+      let output = '';
+      output += displayMatrix(matrix, 'Matrix A');
+      output += `<h3>Minor of a[${row+1}, ${col+1}]:</h3>` + displayMatrix(mMinor, '');
+      output += `<h3>Cofactor of a[${row+1}, ${col+1}]: ${cofVal}</h3>`;
+      output += displayMatrix(cofMatrix, 'Cofactor Matrix of A');
+      output += displayMatrix(adj, 'Adjugate Matrix of A');
+      output += `<h3>Determinant of A: ${det}</h3>`;
+      if (inv) {
+        output += displayMatrix(inv, 'Inverse Matrix of A');
+      } else {
+        output += `<h3 style="color:red">Matrix A is not invertible (Determinant = 0)</h3>`;
+      }
+      document.getElementById('output').innerHTML = output;
+    }
+
+    generateMatrix();
+  </script>
+</body>
+</html>

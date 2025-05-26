@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Matrix Cofactor & Adjugate</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  <h1 class="text-2xl font-bold mb-4">Matrix Cofactor & Adjugate Calculator</h1>
+  <div class="mb-4">
+    <label class="block mb-2">Enter a 3x3 matrix (comma-separated rows):</label>
+    <textarea id="matrixInput" class="w-80 p-2 border rounded" rows="3" placeholder="1,2,3\n4,5,6\n7,8,9"></textarea>
+  </div>
+  <button onclick="compute()" class="bg-blue-500 text-white px-4 py-2 rounded mb-6">Compute</button>
+
+  <div id="output" class="space-y-6 text-center"></div>
+
+  <canvas id="canvas" width="300" height="300" class="mt-8 border"></canvas>
+
+  <script>
+    function compute() {
+      const input = document.getElementById("matrixInput").value;
+      const rows = input.split("\n").map(row => row.split(",").map(Number));
+
+      if (rows.length !== 3 || rows.some(r => r.length !== 3)) {
+        alert("Please enter a 3x3 matrix.");
+        return;
+      }
+
+      const A = math.matrix(rows);
+      const cofactor = math.matrix([[],[],[]]);
+
+      for (let i = 0; i < 3; i++) {
+        cofactor._data[i] = [];
+        for (let j = 0; j < 3; j++) {
+          const minor = A._data.filter((_, x) => x !== i).map(row => row.filter((_, y) => y !== j));
+          const detMinor = math.det(minor);
+          cofactor._data[i][j] = Math.pow(-1, i + j) * detMinor;
+        }
+      }
+
+      const adjugate = math.transpose(cofactor);
+
+      document.getElementById("output").innerHTML = `
+        <div>
+          <h2 class="font-semibold">Cofactor Matrix</h2>
+          <p>\\[ ${matrixToLatex(cofactor)} \\]</p>
+        </div>
+        <div>
+          <h2 class="font-semibold">Adjugate Matrix</h2>
+          <p>\\[ ${matrixToLatex(adjugate)} \\]</p>
+        </div>
+      `;
+      MathJax.typeset();
+      drawMatrix(adjugate);
+    }
+
+    function matrixToLatex(mat) {
+      return `\\begin{bmatrix} ${mat._data.map(row => row.join(" & ")).join(" \\\\ ")} \\end{bmatrix}`;
+    }
+
+    function drawMatrix(matrix) {
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = "16px Arial";
+
+      const cellSize = 80;
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          ctx.strokeRect(j * cellSize, i * cellSize, cellSize, cellSize);
+          ctx.fillText(matrix._data[i][j], j * cellSize + 30, i * cellSize + 45);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
